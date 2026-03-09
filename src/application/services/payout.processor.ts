@@ -9,7 +9,6 @@ import { PayoutStatus } from '../../core/entities/payout.entity';
 import { Payment, PaymentType } from '../../core/entities/payment.entity';
 import { Inject, Logger } from '@nestjs/common';
 import { PaymentGatewayPort } from '../../core/ports/outbound/payment-gateway.port';
-import { ConfigService } from '@nestjs/config';
 
 @Processor('payout')
 export class PayoutProcessor extends WorkerHost {
@@ -22,7 +21,6 @@ export class PayoutProcessor extends WorkerHost {
     private payoutRepo: Repository<PayoutSchema>,
     @InjectRepository(UserSchema) private userRepo: Repository<UserSchema>,
     @Inject('PaymentGatewayPort') private paymentGateway: PaymentGatewayPort,
-    private readonly configService: ConfigService,
   ) {
     super();
   }
@@ -34,6 +32,13 @@ export class PayoutProcessor extends WorkerHost {
       where: { id: paymentId },
     });
     if (!payment) return;
+
+    if (payment.type !== PaymentType.COMMISSION) {
+      this.logger.log(
+        `Skipping payout for non-commission payment ${payment.orderCode}`,
+      );
+      return;
+    }
 
     const { payoutAmount, feeAmount } = Payment.calculateCommission(
       payment.amount,
@@ -85,26 +90,6 @@ export class PayoutProcessor extends WorkerHost {
   }
 
   private async resolveBeneficiary(payment: PaymentSchema) {
-    if (payment.type === PaymentType.DIRECT) {
-      const bankName = this.configService.get<string>('BANK_NAME') || '';
-      const bankAccount = this.configService.get<string>('BANK_ACCOUNT') || '';
-      const accountName =
-        this.configService.get<string>('BANK_ACCOUNT_NAME') || '';
-
-      if (!bankName || !bankAccount || !accountName) {
-        this.logger.error(
-          'DIRECT payment requires BANK_NAME, BANK_ACCOUNT, BANK_ACCOUNT_NAME in .env',
-        );
-        return null;
-      }
-
-      return {
-        bankName,
-        bankAccount,
-        accountName,
-      };
-    }
-
     const seller = await this.userRepo.findOne({
       where: { id: payment.sellerId },
     });

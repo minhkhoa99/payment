@@ -17,9 +17,11 @@ export interface CreatePayout {
 }
 
 export interface PaymentGatewayPort {
-  createPaymentLink(data: CreatePaymentLink): Promise<{ checkoutUrl: string; qrCode: string }>;
-  verifyWebhookSignature(payload: any, signature: string): boolean;
+  createPaymentLink(
+    data: CreatePaymentLink,
+  ): Promise<{ checkoutUrl: string; qrCode: string }>;
+  verifyWebhookSignature(payload: any, signature: string): Promise<boolean>;
   createPayout(data: any): Promise<any>;
   getPayoutAccountBalance(): Promise<any>;
-  confirmWebhook(url: string): Promise<string>;
+  confirmWebhook(url: string): Promise<any>;
 }

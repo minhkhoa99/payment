@@ -78,7 +78,7 @@ export class PaymentService {
         processed: true,
       });
 
-      const isVerified = this.paymentGateway.verifyWebhookSignature(
+      const isVerified = await this.paymentGateway.verifyWebhookSignature(
         payload,
         safeSignature,
       );
@@ -100,12 +100,16 @@ export class PaymentService {
           payment.id,
           PaymentStatus.PAID,
         );
-        await this.payoutQueue.add('process-payout', { paymentId: payment.id });
+        if (payment.type === PaymentType.COMMISSION) {
+          await this.payoutQueue.add('process-payout', {
+            paymentId: payment.id,
+          });
+        }
 
-        // Invalidate cache: Khi thanh toán thành công, xóa mọi cache history liên quan đến buyer/seller
-        // Đơn giản nhất là xóa theo prefix nếu store hỗ trợ, hoặc xóa các key phổ biến
         this.logger.log(
-          `Payment confirmed. Queuing payout for order: ${webhookData.orderCode}`,
+          payment.type === PaymentType.COMMISSION
+            ? `Payment confirmed. Queuing payout for order: ${webhookData.orderCode}`
+            : `Payment confirmed. No payout required for order: ${webhookData.orderCode}`,
         );
       }
     } catch (e) {

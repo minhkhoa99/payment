@@ -24,9 +24,12 @@ export class Payment {
   createdAt: Date;
   updatedAt: Date;
 
-  static calculateCommission(amount: number, type: PaymentType): { payoutAmount: number; feeAmount: number } {
+  static calculateCommission(
+    amount: number,
+    type: PaymentType,
+  ): { payoutAmount: number; feeAmount: number } {
     if (type === PaymentType.DIRECT) {
-      return { payoutAmount: amount, feeAmount: 0 };
+      return { payoutAmount: 0, feeAmount: 0 };
     }
     const feeAmount = amount * 0.1;
     return { payoutAmount: amount - feeAmount, feeAmount };

@@ -20,12 +20,13 @@ export class PayOSAdapter implements PaymentGatewayPort {
       this.configService.get<string>('PAYOS_CHECKSUM_KEY') || '';
 
     try {
-      // Sửa lỗi: Đối với @payos/node v2, export có thể là default hoặc direct class
-      // Chúng ta sẽ kiểm tra xem PayOS có phải là một class (constructor) hay không
       const TargetPayOS = PayOS.PayOS || PayOS.default || PayOS;
 
-      // Khởi tạo instance
-      this.payos = new TargetPayOS(clientId, apiKey, checksumKey);
+      this.payos = new TargetPayOS({
+        clientId,
+        apiKey,
+        checksumKey,
+      });
 
       this.logger.log('PayOS SDK initialized successfully');
     } catch (e) {
@@ -36,7 +37,7 @@ export class PayOSAdapter implements PaymentGatewayPort {
   async createPaymentLink(
     data: CreatePaymentLink,
   ): Promise<{ checkoutUrl: string; qrCode: string }> {
-    const paymentLinkRes = await this.payos.createPaymentLink({
+    const paymentLinkRes = await this.payos.paymentRequests.create({
       amount: data.amount,
       orderCode: data.orderCode,
       description: data.description,
@@ -50,9 +51,15 @@ export class PayOSAdapter implements PaymentGatewayPort {
     };
   }
 
-  verifyWebhookSignature(payload: any, signature: string): boolean {
+  async verifyWebhookSignature(
+    payload: any,
+    signature: string,
+  ): Promise<boolean> {
     try {
-      const verifiedData = this.payos.verifyPaymentWebhookData(payload);
+      const verifiedData = await this.payos.webhooks.verify({
+        ...payload,
+        signature: signature || payload.signature,
+      });
       return !!verifiedData;
     } catch (e) {
       this.logger.error(`Webhook verification failed: ${e.message}`);
@@ -61,14 +68,14 @@ export class PayOSAdapter implements PaymentGatewayPort {
   }
 
   async createPayout(data: any): Promise<any> {
-    return await this.payos.createDisbursement(data);
+    return await this.payos.payouts.create(data);
   }
 
   async getPayoutAccountBalance(): Promise<any> {
-    return await this.payos.getDisbursementAccountBalance();
+    return await this.payos.payoutsAccount.balance();
   }
 
-  async confirmWebhook(url: string): Promise<string> {
-    return await this.payos.confirmWebhook(url);
+  async confirmWebhook(url: string): Promise<any> {
+    return await this.payos.webhooks.confirm(url);
   }
 }
