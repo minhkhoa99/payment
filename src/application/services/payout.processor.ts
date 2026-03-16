@@ -91,7 +91,7 @@ export class PayoutProcessor extends WorkerHost {
 
   private async resolveBeneficiary(payment: PaymentSchema) {
     const seller = await this.userRepo.findOne({
-      where: { id: payment.sellerId },
+      where: { sellerId: payment.sellerId },
     });
 
     if (

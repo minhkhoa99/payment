@@ -1,4 +1,10 @@
-import { Injectable, Inject, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Inject,
+  Logger,
+  UnauthorizedException,
+} from '@nestjs/common';
 import {
   Payment,
   PaymentStatus,
@@ -30,7 +36,7 @@ export class PaymentService {
     private readonly webhookLogRepo: Repository<WebhookLogSchema>,
     private readonly configService: ConfigService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
-  ) {}
+  ) { }
 
   async createPayment(data: {
     amount: number;
@@ -70,23 +76,46 @@ export class PaymentService {
   }
 
   async handleWebhook(payload: any, signature: string | undefined) {
-    try {
-      const safeSignature = signature || '';
-      await this.webhookLogRepo.save({
-        payload,
-        signature: safeSignature,
-        processed: true,
-      });
+    const safeSignature = signature || payload?.signature || '';
+    console.log("safeSignature", safeSignature);
+    const webhookLog = await this.webhookLogRepo.save({
+      payload,
+      signature: safeSignature,
+      processed: false,
+    });
 
-      const isVerified = await this.paymentGateway.verifyWebhookSignature(
-        payload,
-        safeSignature,
-      );
+    try {
+      const allowInsecureWebhook =
+        this.configService.get<string>('NODE_ENV') !== 'production' &&
+        this.configService.get<string>('PAYOS_SKIP_WEBHOOK_SIGNATURE') ===
+        'true';
+
+      let isVerified = false;
+
+      if (!safeSignature && allowInsecureWebhook) {
+        this.logger.warn(
+          'Skipping webhook signature verification in non-production mode',
+        );
+        isVerified = true;
+      } else {
+        isVerified = await this.paymentGateway.verifyWebhookSignature(
+          payload,
+          safeSignature,
+        );
+      }
+
       if (!isVerified) {
         this.logger.warn('Webhook signature verification failed');
+        throw new UnauthorizedException('Invalid webhook signature');
       }
 
       const webhookData = payload.data || payload;
+      if (!webhookData?.orderCode) {
+        throw new BadRequestException('Webhook payload missing orderCode');
+      }
+
+      await this.webhookLogRepo.update(webhookLog.id, { processed: true });
+
       const payment = await this.paymentRepository.findByOrderCode(
         webhookData.orderCode,
       );
@@ -114,6 +143,7 @@ export class PaymentService {
       }
     } catch (e) {
       this.logger.error(`handleWebhook Error: ${e.message}`);
+      throw e;
     }
   }
 

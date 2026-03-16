@@ -6,6 +6,7 @@ import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-yet';
 import { PaymentService } from './application/services/payment.service';
 import { BankService } from './application/services/bank.service';
+import { SellerService } from './application/services/seller.service';
 import { PayoutProcessor } from './application/services/payout.processor';
 import { PayOSAdapter } from './infrastructure/adapters/outbound/payos.adapter';
 import { PostgresPaymentRepository } from './infrastructure/adapters/outbound/postgres-payment.repository';
@@ -15,6 +16,7 @@ import { UserSchema } from './infrastructure/database/user.schema';
 import { WebhookLogSchema } from './infrastructure/database/webhook-log.schema';
 import { BankController } from './infrastructure/adapters/inbound/bank.controller';
 import { PaymentController } from './infrastructure/adapters/inbound/payment.controller';
+import { SellerController } from './infrastructure/adapters/inbound/seller.controller';
 
 @Module({
   imports: [
@@ -60,10 +62,11 @@ import { PaymentController } from './infrastructure/adapters/inbound/payment.con
       isGlobal: true,
     }),
   ],
-  controllers: [PaymentController, BankController],
+  controllers: [PaymentController, BankController, SellerController],
   providers: [
     BankService,
     PaymentService,
+    SellerService,
     PayoutProcessor,
     {
       provide: 'PaymentGatewayPort',

@@ -62,20 +62,49 @@ export class PayOSAdapter implements PaymentGatewayPort {
       });
       return !!verifiedData;
     } catch (e) {
-      this.logger.error(`Webhook verification failed: ${e.message}`);
+      this.logger.error(
+        `Webhook verification failed: ${this.formatPayOSError(e)}`,
+      );
       return false;
     }
   }
 
   async createPayout(data: any): Promise<any> {
-    return await this.payos.payouts.create(data);
+    try {
+      return await this.payos.payouts.create(data);
+    } catch (e) {
+      throw new Error(this.formatPayOSError(e));
+    }
   }
 
   async getPayoutAccountBalance(): Promise<any> {
-    return await this.payos.payoutsAccount.balance();
+    try {
+      return await this.payos.payoutsAccount.balance();
+    } catch (e) {
+      throw new Error(this.formatPayOSError(e));
+    }
   }
 
   async confirmWebhook(url: string): Promise<any> {
     return await this.payos.webhooks.confirm(url);
+  }
+
+  private formatPayOSError(error: any): string {
+    const rawMessage =
+      error?.response?.data?.desc ||
+      error?.response?.data?.message ||
+      error?.message ||
+      'Unknown PayOS error';
+    const rawCode = error?.response?.data?.code || error?.code;
+
+    if (
+      rawCode === 601 ||
+      String(rawMessage).includes('API key khong ton tai') ||
+      String(rawMessage).includes('API key không tồn tại')
+    ) {
+      return 'PayOS credentials invalid for payout. Check PAYOS_CLIENT_ID, PAYOS_API_KEY, PAYOS_CHECKSUM_KEY, and payout permission on this merchant account.';
+    }
+
+    return rawCode ? `${rawMessage} (code: ${rawCode})` : String(rawMessage);
   }
 }

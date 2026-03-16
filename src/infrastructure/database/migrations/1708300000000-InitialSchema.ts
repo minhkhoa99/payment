@@ -1,24 +1,24 @@
-import { MigrationInterface, QueryRunner } from "typeorm";
+import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class InitialSchema1708300000000 implements MigrationInterface {
-    name = 'InitialSchema1708300000000'
+  name = 'InitialSchema1708300000000';
 
-    public async up(queryRunner: QueryRunner): Promise<void> {
-        // Table: users
-        await queryRunner.query(`
+  public async up(queryRunner: QueryRunner): Promise<void> {
+    // Table: users
+    await queryRunner.query(`
             CREATE TABLE "users" (
                 "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
-                "email" character varying NOT NULL,
+                "sellerId" character varying NOT NULL,
                 "bankName" character varying,
                 "bankAccount" character varying,
                 "accountName" character varying,
                 CONSTRAINT "PK_users" PRIMARY KEY ("id"),
-                CONSTRAINT "UQ_users_email" UNIQUE ("email")
+                CONSTRAINT "UQ_users_sellerId" UNIQUE ("sellerId")
             )
         `);
 
-        // Table: payments
-        await queryRunner.query(`
+    // Table: payments
+    await queryRunner.query(`
             CREATE TYPE "payments_status_enum" AS ENUM('PENDING', 'PAID', 'CANCELLED', 'FAILED');
             CREATE TYPE "payments_type_enum" AS ENUM('DIRECT', 'COMMISSION');
             CREATE TABLE "payments" (
@@ -39,8 +39,8 @@ export class InitialSchema1708300000000 implements MigrationInterface {
             )
         `);
 
-        // Table: payouts
-        await queryRunner.query(`
+    // Table: payouts
+    await queryRunner.query(`
             CREATE TYPE "payouts_status_enum" AS ENUM('PENDING', 'PROCESSING', 'COMPLETED', 'FAILED');
             CREATE TABLE "payouts" (
                 "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -58,8 +58,8 @@ export class InitialSchema1708300000000 implements MigrationInterface {
             )
         `);
 
-        // Table: webhook_logs
-        await queryRunner.query(`
+    // Table: webhook_logs
+    await queryRunner.query(`
             CREATE TABLE "webhook_logs" (
                 "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
                 "payload" jsonb NOT NULL,
@@ -69,15 +69,15 @@ export class InitialSchema1708300000000 implements MigrationInterface {
                 CONSTRAINT "PK_webhook_logs" PRIMARY KEY ("id")
             )
         `);
-    }
+  }
 
-    public async down(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`DROP TABLE "webhook_logs"`);
-        await queryRunner.query(`DROP TABLE "payouts"`);
-        await queryRunner.query(`DROP TYPE "payouts_status_enum"`);
-        await queryRunner.query(`DROP TABLE "payments"`);
-        await queryRunner.query(`DROP TYPE "payments_type_enum"`);
-        await queryRunner.query(`DROP TYPE "payments_status_enum"`);
-        await queryRunner.query(`DROP TABLE "users"`);
-    }
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(`DROP TABLE "webhook_logs"`);
+    await queryRunner.query(`DROP TABLE "payouts"`);
+    await queryRunner.query(`DROP TYPE "payouts_status_enum"`);
+    await queryRunner.query(`DROP TABLE "payments"`);
+    await queryRunner.query(`DROP TYPE "payments_type_enum"`);
+    await queryRunner.query(`DROP TYPE "payments_status_enum"`);
+    await queryRunner.query(`DROP TABLE "users"`);
+  }
 }

@@ -6,7 +6,7 @@ export class UserSchema {
   id: string;
 
   @Column({ unique: true })
-  email: string;
+  sellerId: string;
 
   @Column({ nullable: true })
   bankName: string;
